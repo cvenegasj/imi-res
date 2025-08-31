@@ -18,7 +18,7 @@ public class OpenAiClient {
 
     private final WebClient client;
 
-    public OpenAiClient(@Value("${openai}") String apiKey) {
+    public OpenAiClient(@Value("${openai.api.key}") String apiKey) {
         this.client = WebClient.builder()
                 .baseUrl("https://api.openai.com/v1")
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
