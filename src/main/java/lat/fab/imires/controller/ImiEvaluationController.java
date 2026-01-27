@@ -3,7 +3,6 @@ package lat.fab.imires.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lat.fab.imires.util.OpenAiClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +18,17 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/imi")
-@RequiredArgsConstructor
 @Slf4j
 public class ImiEvaluationController {
 
     private final OpenAiClient openAiClient;
+    private final String openAiModel;
+
+    public ImiEvaluationController(OpenAiClient openAiClient,
+                                   @org.springframework.beans.factory.annotation.Value("${openai.model}") String openAiModel) {
+        this.openAiClient = openAiClient;
+        this.openAiModel = openAiModel;
+    }
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final List<String> fileIds = List.of(
@@ -285,7 +290,7 @@ public class ImiEvaluationController {
     // =================== Helpers ===================
     private Mono<String> crearAssistant() {
         return openAiClient.post("/assistants", Map.of(
-                "model", "gpt-4-turbo",
+                "model", openAiModel,
                 "name", "IMI Evaluador",
                 "instructions", "Eres un experto en madurez industrial. Responde solo en JSON.",
                 "tools", List.of(Map.of("type", "file_search"))

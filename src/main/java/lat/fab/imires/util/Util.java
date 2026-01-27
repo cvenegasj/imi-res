@@ -228,6 +228,9 @@ public class Util {
             new AbstractMap.SimpleEntry<>("Vietnam", "VNM"),
             new AbstractMap.SimpleEntry<>("Yemen", "YEM"),
             new AbstractMap.SimpleEntry<>("Zambia", "ZMB"),
-            new AbstractMap.SimpleEntry<>("Zimbabwe", "ZWE")
+            new AbstractMap.SimpleEntry<>("Zimbabwe", "ZWE"),
+            new AbstractMap.SimpleEntry<>("Estados Unidos", "USA"),
+            new AbstractMap.SimpleEntry<>("Malasia", "MYS"),
+            new AbstractMap.SimpleEntry<>("Perú", "PER")
     );
 }
