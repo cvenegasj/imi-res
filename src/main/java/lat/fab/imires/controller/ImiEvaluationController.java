@@ -288,44 +288,77 @@ public class ImiEvaluationController {
 
 
     // =================== Helpers ===================
+    private static final String VECTOR_STORE_ID = "vs_686b20300f70819186e3ab012086c748";
+
     private Mono<String> crearAssistant() {
+        log.info("Creando assistant con modelo: '{}'", openAiModel);
         return openAiClient.post("/assistants", Map.of(
                 "model", openAiModel,
                 "name", "IMI Evaluador",
                 "instructions", "Eres un experto en madurez industrial. Responde solo en JSON.",
                 "tools", List.of(Map.of("type", "file_search"))
-        )).map(resp -> resp.path("id").asText());
+        )).map(resp -> {
+            String id = resp.path("id").asText();
+            log.info("Assistant creado: {}", id);
+            return id;
+        });
     }
 
     private Mono<String> crearThread() {
+        log.info("Creando thread...");
         return openAiClient.post("/threads", Map.of())
-                .map(resp -> resp.path("id").asText());
+                .map(resp -> {
+                    String id = resp.path("id").asText();
+                    log.info("Thread creado: {}", id);
+                    return id;
+                });
     }
 
     private Mono<JsonNode> enviarMensaje(String threadId, String prompt) {
+        log.info("Enviando mensaje al thread: {}", threadId);
         return openAiClient.post("/threads/" + threadId + "/messages", Map.of(
                 "role", "user", "content", prompt
-        ));
+        )).doOnSuccess(resp -> log.info("Mensaje enviado correctamente"));
     }
 
     private Mono<String> iniciarRun(String assistantId, String threadId) {
+        log.info("Iniciando run - assistant: {}, thread: {}, vector_store: {}", assistantId, threadId, VECTOR_STORE_ID);
         return openAiClient.post("/threads/" + threadId + "/runs", Map.of(
                 "assistant_id", assistantId,
                 "tool_resources", Map.of("file_search",
-                        Map.of("vector_store_ids", List.of("vs_686b20300f70819186e3ab012086c748")))
-        )).map(resp -> resp.path("id").asText());
+                        Map.of("vector_store_ids", List.of(VECTOR_STORE_ID)))
+        )).map(resp -> {
+            String id = resp.path("id").asText();
+            log.info("Run iniciado: {}", id);
+            return id;
+        });
     }
 
     private Mono<JsonNode> esperarRun(String threadId, String runId) {
+        log.info("Esperando completar run: {}", runId);
         return Flux.interval(Duration.ofSeconds(3))
                 .flatMap(tick -> openAiClient.get("/threads/" + threadId + "/runs/" + runId))
-                .filter(resp -> "completed".equals(resp.path("status").asText()))
-                .next();
+                .doOnNext(resp -> log.info("Run status: {}", resp.path("status").asText()))
+                .filter(resp -> {
+                    String status = resp.path("status").asText();
+                    if ("failed".equals(status) || "cancelled".equals(status) || "expired".equals(status)) {
+                        log.error("Run terminó con error: {}", resp);
+                        throw new RuntimeException("Run failed with status: " + status);
+                    }
+                    return "completed".equals(status);
+                })
+                .next()
+                .doOnSuccess(resp -> log.info("Run completado exitosamente"));
     }
 
     private Mono<String> obtenerRespuesta(String threadId) {
+        log.info("Obteniendo respuesta del thread: {}", threadId);
         return openAiClient.get("/threads/" + threadId + "/messages")
-                .map(resp -> resp.path("data").get(0).path("content").get(0).path("text").path("value").asText());
+                .map(resp -> {
+                    String value = resp.path("data").get(0).path("content").get(0).path("text").path("value").asText();
+                    log.info("Respuesta obtenida, longitud: {} caracteres", value.length());
+                    return value;
+                });
     }
 
     private String formatearRespuestas(Map<String, Object> respuestas) {
