@@ -23,11 +23,14 @@ public class ImiEvaluationController {
 
     private final OpenAiClient openAiClient;
     private final String openAiModel;
+    private final String vectorStoreId;
 
     public ImiEvaluationController(OpenAiClient openAiClient,
-                                   @org.springframework.beans.factory.annotation.Value("${openai.model}") String openAiModel) {
+                                   @org.springframework.beans.factory.annotation.Value("${openai.model}") String openAiModel,
+                                   @org.springframework.beans.factory.annotation.Value("${openai.vector-store-id}") String vectorStoreId) {
         this.openAiClient = openAiClient;
         this.openAiModel = openAiModel;
+        this.vectorStoreId = vectorStoreId;
     }
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -288,8 +291,6 @@ public class ImiEvaluationController {
 
 
     // =================== Helpers ===================
-    private static final String VECTOR_STORE_ID = "vs_686b20300f70819186e3ab012086c748";
-
     private Mono<String> crearAssistant() {
         log.info("Creando assistant con modelo: '{}'", openAiModel);
         return openAiClient.post("/assistants", Map.of(
@@ -322,11 +323,11 @@ public class ImiEvaluationController {
     }
 
     private Mono<String> iniciarRun(String assistantId, String threadId) {
-        log.info("Iniciando run - assistant: {}, thread: {}, vector_store: {}", assistantId, threadId, VECTOR_STORE_ID);
+        log.info("Iniciando run - assistant: {}, thread: {}, vector_store: {}", assistantId, threadId, vectorStoreId);
         return openAiClient.post("/threads/" + threadId + "/runs", Map.of(
                 "assistant_id", assistantId,
                 "tool_resources", Map.of("file_search",
-                        Map.of("vector_store_ids", List.of(VECTOR_STORE_ID)))
+                        Map.of("vector_store_ids", List.of(vectorStoreId)))
         )).map(resp -> {
             String id = resp.path("id").asText();
             log.info("Run iniciado: {}", id);
